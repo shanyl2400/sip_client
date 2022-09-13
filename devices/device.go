@@ -2,6 +2,7 @@ package devices
 
 import (
 	"sipsimclient/errors"
+	"sipsimclient/model"
 )
 
 const (
@@ -26,7 +27,7 @@ type Device interface {
 	Disconnect() error
 	Send(msg Message) error
 
-	Logs() ([]string, error)
+	Logs(theme model.Theme) ([]string, error)
 
 	Name() string
 	Address() string

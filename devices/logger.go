@@ -2,80 +2,110 @@ package devices
 
 import (
 	"fmt"
-	"log"
-	"os"
-	"time"
-)
-
-const (
-	infoLevel  = "INFO"
-	warnLeve   = "WARN"
-	errLevel   = "ERR"
-	fatalLevel = "FATAL"
-	recvLevel  = "RECV"
-	sendLevel  = "SEND"
+	"sipsimclient/model"
+	"sipsimclient/repository"
 )
 
 type DeviceLogger struct {
-	logger *log.Logger
-	file   *os.File
+	deviceName string
 }
 
 func (d *DeviceLogger) Info(text string) {
-	d.logger.Print(d.log(infoLevel, text))
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeInfo,
+		Message:    text,
+	})
 }
 func (d *DeviceLogger) Infof(text string, val ...interface{}) {
-	d.logger.Printf(d.log(infoLevel, text), val...)
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeInfo,
+		Message:    fmt.Sprintf(text, val...),
+	})
 }
 
 func (d *DeviceLogger) Warn(text string) {
-	d.logger.Print(d.log(warnLeve, text))
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeWarn,
+		Message:    text,
+	})
 }
 func (d *DeviceLogger) Warnf(text string, val ...interface{}) {
-	d.logger.Printf(d.log(warnLeve, text), val...)
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeWarn,
+		Message:    fmt.Sprintf(text, val...),
+	})
 }
 
 func (d *DeviceLogger) Error(text string) {
-	d.logger.Print(d.log(errLevel, text))
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeError,
+		Message:    text,
+	})
 }
 func (d *DeviceLogger) Errorf(text string, val ...interface{}) {
-	d.logger.Printf(d.log(errLevel, text), val...)
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeError,
+		Message:    fmt.Sprintf(text, val...),
+	})
 }
 
 func (d *DeviceLogger) Send(text string) {
-	d.logger.Print(d.log(sendLevel, "\n"+text))
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeSend,
+		Message:    text,
+	})
 }
 func (d *DeviceLogger) Sendf(text string, val ...interface{}) {
-	d.logger.Printf(d.log(sendLevel, "\n"+text), val...)
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeSend,
+		Message:    fmt.Sprintf(text, val...),
+	})
 }
 
 func (d *DeviceLogger) Receive(text string, val ...interface{}) {
-	d.logger.Printf(d.log(recvLevel, "\n"+text), val...)
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeRecevice,
+		Message:    text,
+	})
 }
 func (d *DeviceLogger) Receivef(text string, val ...interface{}) {
-	d.logger.Printf(d.log(recvLevel, "\n"+text), val...)
+	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
+		DeviceName: d.deviceName,
+		Theme:      model.ThemeRecevice,
+		Message:    fmt.Sprintf(text, val...),
+	})
 }
 
-func (d *DeviceLogger) Fatal(text string) {
-	d.logger.Fatal(d.log(fatalLevel, text))
-}
-func (d *DeviceLogger) Fatalf(text string, val ...interface{}) {
-	d.logger.Printf(d.log(fatalLevel, text), val...)
-}
-
-func (d *DeviceLogger) log(level string, text string) string {
-	return fmt.Sprintf("[%v] %v %v", level, time.Now().Format("2006/01/02 03:04:05.9999"), text)
+func (d *DeviceLogger) Logs(theme model.Theme) ([]string, error) {
+	logs, err := repository.GetDeviceLogRepository().Query(d.deviceName, theme)
+	if err != nil {
+		fmt.Println("query logs failed", err)
+		return nil, err
+	}
+	out := make([]string, len(logs))
+	for i := range logs {
+		out[i] = fmt.Sprintf("%v device: %v, theme: %v, msg: %v\n",
+			logs[i].CreatedAt.Format("2006/01/02 03:04:05.9999"),
+			logs[i].DeviceName, logs[i].Theme, logs[i].Message)
+	}
+	return out, nil
 }
 
 func NewLogger(deviceName string) (*DeviceLogger, error) {
-	logFileName := fmt.Sprintf("%v_%v.log", deviceName, time.Now().Format("20060102"))
-	f, err := os.Create(logFileName)
-	if err != nil {
-		return nil, err
-	}
-	logger := log.New(f, "", 0)
 	return &DeviceLogger{
-		file:   f,
-		logger: logger,
+		deviceName: deviceName,
 	}, nil
+}
+
+func ReleaseLogger(deviceName string) {
+	repository.GetDeviceLogRepository().DeleteAll(deviceName)
 }

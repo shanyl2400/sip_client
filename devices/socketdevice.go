@@ -6,6 +6,7 @@ import (
 	"net"
 	"sipsimclient/config"
 	"sipsimclient/devices/message"
+	"sipsimclient/model"
 	"strconv"
 	"strings"
 	"sync"
@@ -102,9 +103,9 @@ func (td *socketDevice) SendForResponse(msg Message) error {
 	return nil
 }
 
-func (td *socketDevice) Logs() ([]string, error) {
+func (td *socketDevice) Logs(theme model.Theme) ([]string, error) {
 	//TODO: implement it
-	return nil, nil
+	return td.logger.Logs(theme)
 }
 
 func (td *socketDevice) Name() string {
@@ -187,6 +188,8 @@ func (td *socketDevice) handleRequest(msg *sip.Msg) {
 	case sip.MethodCancel:
 		fmt.Println("receive cancel")
 		td.SendForResponse(message.NewOKResponseMessage(msg))
+	default:
+		td.logger.Warnf("Unhandled request: %v", msg)
 	}
 }
 
@@ -257,7 +260,7 @@ func createSocketDevice(req AddDeviceRequest) (*socketDevice, error) {
 		state:           DeviceStateReady,
 		protocol:        req.Protocol,
 		logger:          logger,
-		ticker:          time.NewTicker(10 * time.Second),
+		ticker:          time.NewTicker(30 * time.Second),
 		quit:            make(chan struct{}),
 		socketMsg:       make(chan string, 1),
 		pendingResponse: make(map[string]Message),

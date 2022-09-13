@@ -60,6 +60,7 @@ func NewPrompt() *Prompt {
 		prompt.OptionPrefix("> "),
 		prompt.OptionTitle("http-prompt"),
 	)
+	pt.deviceManager.Init()
 	pt.prompt = p
 	return pt
 }

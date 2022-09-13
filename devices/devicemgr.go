@@ -3,11 +3,14 @@ package devices
 import (
 	"fmt"
 	"sipsimclient/errors"
+	"sipsimclient/model"
+	"sipsimclient/repository"
 
 	"github.com/alexeyco/simpletable"
 )
 
 type DeviceManager interface {
+	Init()
 	List() DeviceList
 	Get(name string) (Device, error)
 	Add(req AddDeviceRequest) error
@@ -17,7 +20,7 @@ type DeviceManager interface {
 	Remove(name string) error
 	Send(name string, msg Message) error
 
-	Logs(name string) ([]string, error)
+	Logs(name string, theme model.Theme) ([]string, error)
 }
 
 type DeviceList []Device
@@ -47,11 +50,14 @@ func (devices DeviceList) String() string {
 	return table.String()
 }
 
-type DeviceMapManager struct {
+type deviceMapManager struct {
 	devices map[string]Device
 }
 
-func (dm *DeviceMapManager) List() DeviceList {
+func (dm *deviceMapManager) Init() {
+}
+
+func (dm *deviceMapManager) List() DeviceList {
 	//TODO: implement it
 	ans := make([]Device, 0, len(dm.devices))
 	for _, v := range dm.devices {
@@ -59,14 +65,14 @@ func (dm *DeviceMapManager) List() DeviceList {
 	}
 	return ans
 }
-func (dm *DeviceMapManager) Get(name string) (Device, error) {
+func (dm *deviceMapManager) Get(name string) (Device, error) {
 	device, exists := dm.devices[name]
 	if !exists {
 		return nil, errors.ErrDeviceNotExists
 	}
 	return device, nil
 }
-func (dm *DeviceMapManager) Add(req AddDeviceRequest) error {
+func (dm *deviceMapManager) Add(req AddDeviceRequest) error {
 	//check name duplicate
 	_, exists := dm.devices[req.Name]
 	if exists {
@@ -81,21 +87,21 @@ func (dm *DeviceMapManager) Add(req AddDeviceRequest) error {
 	return nil
 }
 
-func (dm *DeviceMapManager) Connect(name string) error {
+func (dm *deviceMapManager) Connect(name string) error {
 	device, exists := dm.devices[name]
 	if !exists {
 		return errors.ErrDeviceNotExists
 	}
 	return device.Connect()
 }
-func (dm *DeviceMapManager) Disconnect(name string) error {
+func (dm *deviceMapManager) Disconnect(name string) error {
 	device, exists := dm.devices[name]
 	if !exists {
 		return errors.ErrDeviceNotExists
 	}
 	return device.Disconnect()
 }
-func (dm *DeviceMapManager) Remove(name string) error {
+func (dm *deviceMapManager) Remove(name string) error {
 	device, exists := dm.devices[name]
 	if !exists {
 		//no such name
@@ -108,9 +114,19 @@ func (dm *DeviceMapManager) Remove(name string) error {
 		}
 	}
 	delete(dm.devices, name)
+
+	//release logger
+	ReleaseLogger(name)
+
+	//data persistence
+	err := repository.GetDeviceRepository().Delete(name)
+	if err != nil {
+		fmt.Println("data persistence failed, err:", err)
+	}
+
 	return nil
 }
-func (dm *DeviceMapManager) Send(name string, msg Message) error {
+func (dm *deviceMapManager) Send(name string, msg Message) error {
 	device, exists := dm.devices[name]
 	if !exists {
 		return errors.ErrDeviceNotExists
@@ -118,12 +134,12 @@ func (dm *DeviceMapManager) Send(name string, msg Message) error {
 	return device.Send(msg)
 }
 
-func (dm *DeviceMapManager) Logs(name string) ([]string, error) {
+func (dm *deviceMapManager) Logs(name string, theme model.Theme) ([]string, error) {
 	device, exists := dm.devices[name]
 	if !exists {
 		return nil, errors.ErrDeviceNotExists
 	}
-	return device.Logs()
+	return device.Logs(theme)
 }
 
 type AddDeviceRequest struct {
@@ -133,7 +149,10 @@ type AddDeviceRequest struct {
 }
 
 func NewDeviceManager() DeviceManager {
-	return &DeviceMapManager{
-		devices: map[string]Device{},
+	persistenceManager := &devicePersistenceManager{
+		manager: &deviceMapManager{
+			devices: map[string]Device{},
+		},
 	}
+	return persistenceManager
 }

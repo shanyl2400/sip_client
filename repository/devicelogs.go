@@ -4,44 +4,23 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	"sipsimclient/model"
 	"sync"
 	"time"
 
 	"github.com/boltdb/bolt"
 )
 
-const (
-	ThemeSend     = "send"
-	ThemeRecevice = "receive"
-
-	ThemeAll         = "all"
-	ThemeSendRecv    = "send/recv"
-	ThemeTransaction = "transaction"
-)
-
-type Theme string
-
-func (t Theme) filter(t2 Theme) bool {
-	if t == t2 || t == ThemeAll {
-		return true
-	}
-	if t == ThemeSendRecv && (t2 == ThemeSend || t2 == ThemeRecevice) {
-		return true
-	}
-
-	return false
-}
-
 type DeviceLog struct {
 	DeviceName string
-	Theme      Theme
+	Theme      model.Theme
 	Message    string
 	CreatedAt  time.Time
 }
 
 type DeviceLogRepository interface {
 	Add(d *DeviceLog) error
-	Query(name string, theme Theme) ([]*DeviceLog, error)
+	Query(name string, theme model.Theme) ([]*DeviceLog, error)
 	DeleteAll(name string) error
 }
 
@@ -69,7 +48,7 @@ func (b *BoltDeviceLogRepository) Add(d *DeviceLog) error {
 	return nil
 }
 
-func (b *BoltDeviceLogRepository) Query(name string, theme Theme) ([]*DeviceLog, error) {
+func (b *BoltDeviceLogRepository) Query(name string, theme model.Theme) ([]*DeviceLog, error) {
 	out := make([]*DeviceLog, 0)
 	err := Get().View(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(DeviceLogBucket))
@@ -82,7 +61,7 @@ func (b *BoltDeviceLogRepository) Query(name string, theme Theme) ([]*DeviceLog,
 			if err != nil {
 				return err
 			}
-			if theme.filter(log.Theme) {
+			if theme.Filter(log.Theme) {
 				out = append(out, log)
 			}
 		}

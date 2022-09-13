@@ -2,6 +2,7 @@ package repository
 
 import (
 	"sipsimclient/config"
+	"sipsimclient/model"
 	"testing"
 )
 
@@ -15,7 +16,7 @@ func TestPutLogs(t *testing.T) {
 
 	err := repo.Add(&DeviceLog{
 		DeviceName: "d1",
-		Theme:      ThemeSend,
+		Theme:      model.ThemeSend,
 		Message:    "123123",
 	})
 	if err != nil {
@@ -24,7 +25,7 @@ func TestPutLogs(t *testing.T) {
 
 	err = repo.Add(&DeviceLog{
 		DeviceName: "d1",
-		Theme:      ThemeRecevice,
+		Theme:      model.ThemeRecevice,
 		Message:    "22222",
 	})
 	if err != nil {
@@ -33,7 +34,7 @@ func TestPutLogs(t *testing.T) {
 
 	err = repo.Add(&DeviceLog{
 		DeviceName: "d2",
-		Theme:      ThemeSend,
+		Theme:      model.ThemeSend,
 		Message:    "3333",
 	})
 	if err != nil {
@@ -42,14 +43,14 @@ func TestPutLogs(t *testing.T) {
 
 	err = repo.Add(&DeviceLog{
 		DeviceName: "d1",
-		Theme:      ThemeTransaction,
+		Theme:      model.ThemeTransaction,
 		Message:    "444444",
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	out, err := repo.Query("d1", ThemeAll)
+	out, err := repo.Query("d1", model.ThemeAll)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -58,7 +59,7 @@ func TestPutLogs(t *testing.T) {
 		t.Logf("%#v", out[i])
 	}
 
-	out, err = repo.Query("d1", ThemeSendRecv)
+	out, err = repo.Query("d1", model.ThemeSendRecv)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,7 +68,7 @@ func TestPutLogs(t *testing.T) {
 		t.Logf("%#v", out[i])
 	}
 
-	out, err = repo.Query("d2", ThemeSend)
+	out, err = repo.Query("d2", model.ThemeSend)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -76,7 +77,7 @@ func TestPutLogs(t *testing.T) {
 		t.Logf("%#v", out[i])
 	}
 
-	out, err = repo.Query("d2", ThemeRecevice)
+	out, err = repo.Query("d2", model.ThemeRecevice)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +91,7 @@ func TestPutLogs(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	out, err = repo.Query("d1", ThemeAll)
+	out, err = repo.Query("d1", model.ThemeAll)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +100,7 @@ func TestPutLogs(t *testing.T) {
 		t.Logf("%#v", out[i])
 	}
 
-	out, err = repo.Query("d2", ThemeAll)
+	out, err = repo.Query("d2", model.ThemeAll)
 	if err != nil {
 		t.Fatal(err)
 	}

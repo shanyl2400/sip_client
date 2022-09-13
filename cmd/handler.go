@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"sipsimclient/devices"
 	"sipsimclient/http"
+	"sipsimclient/model"
 	"strconv"
 	"strings"
 )
@@ -223,11 +224,11 @@ func (p *Prompt) send(args []string) {
 }
 
 func (p *Prompt) logs(args []string) {
-	if len(args) != 1 {
+	if len(args) != 2 {
 		fmt.Println("remove args only need one")
 		return
 	}
-	logs, err := p.deviceManager.Logs(args[0])
+	logs, err := p.deviceManager.Logs(args[0], model.Theme(args[1]))
 	if err != nil {
 		fmt.Println("remove failed, err:", err)
 		return
