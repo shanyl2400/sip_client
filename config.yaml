@@ -1,0 +1,7 @@
+socket_server_host: "127.0.0.1"
+socket_server_port: 5061
+http_server_host: "http://127.0.0.1"
+http_server_port: 8502
+sip_scope: "3402000001"
+
+boltdb_path: "./sip_client.db"
