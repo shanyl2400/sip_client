@@ -1,9 +1,11 @@
 package repository
 
 import (
+	"fmt"
 	"sipsimclient/config"
 	"sipsimclient/model"
 	"testing"
+	"time"
 )
 
 func TestPutLogs(t *testing.T) {
@@ -107,5 +109,30 @@ func TestPutLogs(t *testing.T) {
 	t.Log("-----5-----")
 	for i := range out {
 		t.Logf("%#v", out[i])
+	}
+}
+
+func TestQueryLogs(t *testing.T) {
+	config.Set(&config.Config{
+		BoltDBPath: "./sip_client.db",
+	})
+	Init()
+	defer Close()
+	repo := GetDeviceLogRepository()
+
+	// _, err := repo.Query("d1", model.ThemeAll)
+	// if err != nil {
+	// 	t.Fatal(err)
+	// }
+	// fmt.Println("--------------")
+	end := time.Now()
+	start := end.Add(-time.Second * 60 * 10)
+	fmt.Println("start:", start, "end:", end)
+	out, err := repo.QueryRange("d1", model.ThemeAll, start, end)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for i := range out {
+		t.Log(out[i])
 	}
 }

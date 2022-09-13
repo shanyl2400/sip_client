@@ -5,6 +5,7 @@ import (
 	"sipsimclient/errors"
 	"sipsimclient/model"
 	"sipsimclient/repository"
+	"time"
 
 	"github.com/alexeyco/simpletable"
 )
@@ -19,8 +20,9 @@ type DeviceManager interface {
 	Disconnect(name string) error
 	Remove(name string) error
 	Send(name string, msg Message) error
+	DoSend(name string, msgType MessageType, val map[string]string) error
 
-	Logs(name string, theme model.Theme) ([]string, error)
+	Logs(name string, theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error)
 }
 
 type DeviceList []Device
@@ -126,6 +128,21 @@ func (dm *deviceMapManager) Remove(name string) error {
 
 	return nil
 }
+
+func (dm *deviceMapManager) DoSend(name string, msgType MessageType, val map[string]string) error {
+	device, err := dm.Get(name)
+	if err != nil {
+		fmt.Println("no such device name:", name)
+		return err
+	}
+	msg := createMessage(device, msgType, val)
+	if msg == nil {
+		fmt.Println("invlaid message type:", msgType)
+		return errors.ErrInvalidMessageType
+	}
+	return dm.Send(name, msg)
+}
+
 func (dm *deviceMapManager) Send(name string, msg Message) error {
 	device, exists := dm.devices[name]
 	if !exists {
@@ -134,12 +151,12 @@ func (dm *deviceMapManager) Send(name string, msg Message) error {
 	return device.Send(msg)
 }
 
-func (dm *deviceMapManager) Logs(name string, theme model.Theme) ([]string, error) {
+func (dm *deviceMapManager) Logs(name string, theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error) {
 	device, exists := dm.devices[name]
 	if !exists {
 		return nil, errors.ErrDeviceNotExists
 	}
-	return device.Logs(theme)
+	return device.Logs(theme, start, end)
 }
 
 type AddDeviceRequest struct {

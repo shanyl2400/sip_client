@@ -22,47 +22,14 @@ func (h *registerMessage) ID() string {
 	return h.id
 }
 func (h *registerMessage) Bytes() []byte {
-	sipurl := &sip.URI{
-		Scheme: "sip",
-		Host:   config.Get().ServerSocketHost,
-		Port:   uint16(config.Get().ServerSocketPort),
-	}
-	msg := sip.Msg{
-		Method:     sip.MethodRegister,
-		Request:    sipurl,
-		CallID:     h.id,
-		CSeq:       generateCSeq(),
-		CSeqMethod: sip.MethodRegister,
-		Via: &sip.Via{
-			Transport: "TCP",
-			Host:      h.host,
-			Port:      uint16(h.port),
-			Param: &sip.Param{
-				Name:  "branch",
-				Value: generateBranch(),
-			}},
-		From: &sip.Addr{
-			Uri: &sip.URI{
-				User: h.name,
-				Host: h.host,
-			},
-			Param: &sip.Param{
-				Name:  "tag",
-				Value: generateTag(),
-			}},
-		To: &sip.Addr{
-			Uri: sipurl,
-		},
-		Contact: &sip.Addr{
-			Uri: &sip.URI{
-				User: h.name,
-				Host: h.host,
-				Port: uint16(h.port),
-			}},
-		MaxForwards:   70,
-		UserAgent:     "CAROT-SIP",
-		Authorization: h.auth(),
-	}
+	msg := defaultMessage(messageValue{
+		id:     h.id,
+		host:   h.host,
+		port:   h.port,
+		name:   h.name,
+		method: sip.MethodRegister,
+	})
+	msg.Authorization = h.auth()
 	var b bytes.Buffer
 	msg.Append(&b)
 	return b.Bytes()

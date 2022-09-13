@@ -8,6 +8,7 @@ import (
 	"sipsimclient/model"
 	"strconv"
 	"strings"
+	"time"
 )
 
 func (p *Prompt) handleDevice(args []string) {
@@ -228,13 +229,15 @@ func (p *Prompt) logs(args []string) {
 		fmt.Println("remove args only need one")
 		return
 	}
-	logs, err := p.deviceManager.Logs(args[0], model.Theme(args[1]))
+	end := time.Now()
+	start := end.Add(-time.Minute * 5)
+	logs, err := p.deviceManager.Logs(args[0], model.Theme(args[1]), start, end)
 	if err != nil {
 		fmt.Println("remove failed, err:", err)
 		return
 	}
 	for _, log := range logs {
-		fmt.Println(log)
+		fmt.Println(log.String())
 	}
 }
 

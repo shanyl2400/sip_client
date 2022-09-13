@@ -21,5 +21,5 @@ func TestLog(t *testing.T) {
 	logger.Info("设备运行中")
 	logger.Infof("设备运行中%v", 123465)
 
-	logger.Logs(model.ThemeAll)
+	t.Log(logger.Logs(model.ThemeAll))
 }

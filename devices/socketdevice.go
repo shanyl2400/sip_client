@@ -1,6 +1,7 @@
 package devices
 
 import (
+	"encoding/json"
 	"fmt"
 	"io"
 	"net"
@@ -87,7 +88,7 @@ func (td *socketDevice) Send(msg Message) error {
 		return nil
 	}
 	msgBytes := msg.Bytes()
-	td.logger.Send(string(msgBytes))
+	td.logger.Send("send message", string(msgBytes))
 	_, err := td.conn.Write(msgBytes)
 	return err
 }
@@ -103,9 +104,9 @@ func (td *socketDevice) SendForResponse(msg Message) error {
 	return nil
 }
 
-func (td *socketDevice) Logs(theme model.Theme) ([]string, error) {
+func (td *socketDevice) Logs(theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error) {
 	//TODO: implement it
-	return td.logger.Logs(theme)
+	return td.logger.RangeLogs(theme, start, end)
 }
 
 func (td *socketDevice) Name() string {
@@ -119,6 +120,12 @@ func (td *socketDevice) Protocol() NetProtocol {
 }
 func (td *socketDevice) State() DeviceState {
 	return td.state
+}
+func (td *socketDevice) Host() string {
+	return td.host
+}
+func (td *socketDevice) Port() int {
+	return td.port
 }
 func (td *socketDevice) setHostPort(addr string) {
 	addrParts := strings.Split(addr, ":")
@@ -158,7 +165,8 @@ func (td *socketDevice) handleResponse(msg *sip.Msg) {
 
 	if !ok {
 		//无效响应
-		td.logger.Warnf("Unknown response: %v", msg)
+		msgJSON, _ := json.Marshal(msg)
+		td.logger.Receive("Unknown response", string(msgJSON))
 		return
 	}
 
@@ -173,7 +181,8 @@ func (td *socketDevice) handleResponse(msg *sip.Msg) {
 			td.state = DeviceStateErr
 		}
 	default:
-		td.logger.Infof("Unhandled response: %v", msg)
+		msgJSON, _ := json.Marshal(msg)
+		td.logger.Receive("Unhandled response", string(msgJSON))
 	}
 }
 func (td *socketDevice) handleRequest(msg *sip.Msg) {
@@ -189,7 +198,8 @@ func (td *socketDevice) handleRequest(msg *sip.Msg) {
 		fmt.Println("receive cancel")
 		td.SendForResponse(message.NewOKResponseMessage(msg))
 	default:
-		td.logger.Warnf("Unhandled request: %v", msg)
+		msgJSON, _ := json.Marshal(msg)
+		td.logger.Receive("Unhandled request", string(msgJSON))
 	}
 }
 
@@ -199,7 +209,7 @@ func (td *socketDevice) handleMessage() {
 		case text := <-td.socketMsg:
 			msg, err := td.parseSIPMsg(text)
 			if err != nil {
-				td.logger.Warnf("Can't parse sip message, msg: %v, err: %v", text, err)
+				td.logger.Receivef("Can't parse sip message, err: %v", text, err)
 				td.state = DeviceStateErr
 				fmt.Println("parse message failed")
 				return
@@ -242,7 +252,7 @@ func (td *socketDevice) receive() {
 			}
 		}
 		msg := string(buf[:n])
-		td.logger.Receivef(msg)
+		td.logger.Receive("receive a message", msg)
 		td.socketMsg <- string(msg)
 	}
 }

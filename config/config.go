@@ -13,6 +13,8 @@ type Config struct {
 	ServerHttpHost   string `yaml:"http_server_host"`
 	ServerHttpPort   int    `yaml:"http_server_port"`
 
+	HttpServerPort int `yaml:"server_port"`
+
 	SIPScope string `yaml:"sip_scope"`
 
 	BoltDBPath string `yaml:"boltdb_path"`

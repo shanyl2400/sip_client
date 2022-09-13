@@ -14,6 +14,7 @@ import (
 type DeviceLog struct {
 	DeviceName string
 	Theme      model.Theme
+	Info       string
 	Message    string
 	CreatedAt  time.Time
 }
@@ -21,6 +22,7 @@ type DeviceLog struct {
 type DeviceLogRepository interface {
 	Add(d *DeviceLog) error
 	Query(name string, theme model.Theme) ([]*DeviceLog, error)
+	QueryRange(name string, theme model.Theme, start, end time.Time) ([]*DeviceLog, error)
 	DeleteAll(name string) error
 }
 
@@ -72,7 +74,35 @@ func (b *BoltDeviceLogRepository) Query(name string, theme model.Theme) ([]*Devi
 	}
 	return out, nil
 }
+func (b *BoltDeviceLogRepository) QueryRange(name string, theme model.Theme, start, end time.Time) ([]*DeviceLog, error) {
+	out := make([]*DeviceLog, 0)
+	err := Get().View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(DeviceLogBucket))
 
+		c := b.Cursor()
+
+		key := fmt.Sprintf("%v:%v", name, start)
+		for k, v := c.Seek([]byte(key)); k != nil && bytes.HasPrefix(k, []byte(name)); k, v = c.Next() {
+			log := new(DeviceLog)
+			err := json.Unmarshal(v, log)
+			if err != nil {
+				return err
+			}
+			if theme.Filter(log.Theme) {
+				out = append(out, log)
+			}
+			if log.CreatedAt.After(end) {
+				break
+			}
+			fmt.Println(">>>:", string(k))
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
 func (b *BoltDeviceLogRepository) DeleteAll(name string) error {
 	err := Get().Batch(func(tx *bolt.Tx) error {
 		b := tx.Bucket([]byte(DeviceLogBucket))

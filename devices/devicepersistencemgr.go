@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sipsimclient/model"
 	"sipsimclient/repository"
+	"time"
 )
 
 type devicePersistenceManager struct {
@@ -78,10 +79,14 @@ func (d *devicePersistenceManager) Remove(name string) error {
 	}
 	return nil
 }
+
 func (d *devicePersistenceManager) Send(name string, msg Message) error {
 	return d.manager.Send(name, msg)
 }
+func (d *devicePersistenceManager) DoSend(name string, msgType MessageType, val map[string]string) error {
+	return d.manager.DoSend(name, msgType, val)
+}
 
-func (d *devicePersistenceManager) Logs(name string, theme model.Theme) ([]string, error) {
-	return d.manager.Logs(name, theme)
+func (d *devicePersistenceManager) Logs(name string, theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error) {
+	return d.manager.Logs(name, theme, start, end)
 }

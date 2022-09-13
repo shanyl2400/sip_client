@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"sipsimclient/model"
 	"sipsimclient/repository"
+	"time"
 )
 
 type DeviceLogger struct {
@@ -14,14 +15,14 @@ func (d *DeviceLogger) Info(text string) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeInfo,
-		Message:    text,
+		Info:       text,
 	})
 }
 func (d *DeviceLogger) Infof(text string, val ...interface{}) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeInfo,
-		Message:    fmt.Sprintf(text, val...),
+		Info:       fmt.Sprintf(text, val...),
 	})
 }
 
@@ -29,14 +30,14 @@ func (d *DeviceLogger) Warn(text string) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeWarn,
-		Message:    text,
+		Info:       text,
 	})
 }
 func (d *DeviceLogger) Warnf(text string, val ...interface{}) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeWarn,
-		Message:    fmt.Sprintf(text, val...),
+		Info:       fmt.Sprintf(text, val...),
 	})
 }
 
@@ -44,58 +45,85 @@ func (d *DeviceLogger) Error(text string) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeError,
-		Message:    text,
+		Info:       text,
 	})
 }
 func (d *DeviceLogger) Errorf(text string, val ...interface{}) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeError,
-		Message:    fmt.Sprintf(text, val...),
+		Info:       fmt.Sprintf(text, val...),
 	})
 }
 
-func (d *DeviceLogger) Send(text string) {
+func (d *DeviceLogger) Send(info string, msg string) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeSend,
-		Message:    text,
+		Message:    msg,
+		Info:       info,
 	})
 }
-func (d *DeviceLogger) Sendf(text string, val ...interface{}) {
+func (d *DeviceLogger) Sendf(info string, msg string, val ...interface{}) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeSend,
-		Message:    fmt.Sprintf(text, val...),
+		Info:       fmt.Sprintf(info, val...),
+		Message:    msg,
 	})
 }
 
-func (d *DeviceLogger) Receive(text string, val ...interface{}) {
+func (d *DeviceLogger) Receive(info string, msg string, val ...interface{}) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeRecevice,
-		Message:    text,
+		Message:    msg,
+		Info:       info,
 	})
 }
-func (d *DeviceLogger) Receivef(text string, val ...interface{}) {
+func (d *DeviceLogger) Receivef(info string, msg string, val ...interface{}) {
 	repository.GetDeviceLogRepository().Add(&repository.DeviceLog{
 		DeviceName: d.deviceName,
 		Theme:      model.ThemeRecevice,
-		Message:    fmt.Sprintf(text, val...),
+		Info:       fmt.Sprintf(info, val...),
+		Message:    msg,
 	})
 }
 
-func (d *DeviceLogger) Logs(theme model.Theme) ([]string, error) {
+func (d *DeviceLogger) Logs(theme model.Theme) ([]*model.DeviceLog, error) {
 	logs, err := repository.GetDeviceLogRepository().Query(d.deviceName, theme)
 	if err != nil {
 		fmt.Println("query logs failed", err)
 		return nil, err
 	}
-	out := make([]string, len(logs))
+	out := make([]*model.DeviceLog, len(logs))
 	for i := range logs {
-		out[i] = fmt.Sprintf("%v device: %v, theme: %v, msg: %v\n",
-			logs[i].CreatedAt.Format("2006/01/02 03:04:05.9999"),
-			logs[i].DeviceName, logs[i].Theme, logs[i].Message)
+		out[i] = &model.DeviceLog{
+			DeviceName: logs[i].DeviceName,
+			Theme:      logs[i].Theme,
+			Info:       logs[i].Info,
+			Message:    logs[i].Message,
+			CreatedAt:  logs[i].CreatedAt,
+		}
+	}
+	return out, nil
+}
+
+func (d *DeviceLogger) RangeLogs(theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error) {
+	logs, err := repository.GetDeviceLogRepository().QueryRange(d.deviceName, theme, start, end)
+	if err != nil {
+		fmt.Println("query logs failed", err)
+		return nil, err
+	}
+	out := make([]*model.DeviceLog, len(logs))
+	for i := range logs {
+		out[i] = &model.DeviceLog{
+			DeviceName: logs[i].DeviceName,
+			Theme:      logs[i].Theme,
+			Info:       logs[i].Info,
+			Message:    logs[i].Message,
+			CreatedAt:  logs[i].CreatedAt,
+		}
 	}
 	return out, nil
 }

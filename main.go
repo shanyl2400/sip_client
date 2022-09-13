@@ -1,8 +1,8 @@
 package main
 
 import (
-	"sipsimclient/cmd"
 	"sipsimclient/config"
+	"sipsimclient/http"
 	"sipsimclient/repository"
 )
 
@@ -11,6 +11,7 @@ func main() {
 	repository.Init()
 	defer repository.Close()
 
-	pt := cmd.NewPrompt()
-	pt.Run()
+	// pt := cmd.NewPrompt()
+	// pt.Run()
+	http.Start()
 }

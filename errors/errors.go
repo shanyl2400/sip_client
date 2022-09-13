@@ -10,5 +10,6 @@ var (
 
 	ErrHttpRequestErr = errors.New("http error")
 
-	ErrUserNotExists = errors.New("user is not exists")
+	ErrUserNotExists      = errors.New("user is not exists")
+	ErrInvalidMessageType = errors.New("invalid message type")
 )

@@ -5,3 +5,4 @@ http_server_port: 8502
 sip_scope: "3402000001"
 
 boltdb_path: "./sip_client.db"
+server_port: 3000

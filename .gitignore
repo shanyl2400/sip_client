@@ -1,2 +1,5 @@
 *.exe
 *.log
+*.db
+*.db.lock
+go.sum

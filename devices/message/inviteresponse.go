@@ -8,20 +8,6 @@ import (
 	"github.com/jart/gosip/sip"
 )
 
-// type SDP struct {
-// 	Origin   Origin      // This must always be present
-// 	Addr     string      // Connect to this IP; never blank (from c=)
-// 	Audio    *Media      // Non-nil if we can establish audio
-// 	Video    *Media      // Non-nil if we can establish video
-// 	Session  string      // s= Session Name (default "-")
-// 	Time     string      // t= Active Time (default "0 0")
-// 	Ptime    int         // Transmit frame every N milliseconds (default 20)
-// 	SendOnly bool        // True if 'a=sendonly' was specified in SDP
-// 	RecvOnly bool        // True if 'a=recvonly' was specified in SDP
-// 	Attrs    [][2]string // a= lines we don't recognize
-// 	Other    [][2]string // Other description
-// }
-
 type inviteResponse struct {
 	ip       string
 	port     int

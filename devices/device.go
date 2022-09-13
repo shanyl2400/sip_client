@@ -3,6 +3,7 @@ package devices
 import (
 	"sipsimclient/errors"
 	"sipsimclient/model"
+	"time"
 )
 
 const (
@@ -27,12 +28,15 @@ type Device interface {
 	Disconnect() error
 	Send(msg Message) error
 
-	Logs(theme model.Theme) ([]string, error)
+	Logs(theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error)
 
 	Name() string
 	Address() string
 	Protocol() NetProtocol
 	State() DeviceState
+
+	Host() string
+	Port() int
 }
 
 func NewDevice(req AddDeviceRequest) (Device, error) {
