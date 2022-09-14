@@ -94,7 +94,6 @@ func (b *BoltDeviceLogRepository) QueryRange(name string, theme model.Theme, sta
 			if log.CreatedAt.After(end) {
 				break
 			}
-			fmt.Println(">>>:", string(k))
 		}
 		return nil
 	})
