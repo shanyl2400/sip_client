@@ -12,4 +12,8 @@ var (
 
 	ErrUserNotExists      = errors.New("user is not exists")
 	ErrInvalidMessageType = errors.New("invalid message type")
+	ErrInvalidToken       = errors.New("invalid token")
+	ErrUserExists         = errors.New("user exists")
+	ErrIncorrectPassword  = errors.New("incorrect password")
+	ErrRemoveAdmin        = errors.New("can't remove admin")
 )

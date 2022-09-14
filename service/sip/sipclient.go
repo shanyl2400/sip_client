@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"sipsimclient/config"
 	"sipsimclient/errors"
+	"sipsimclient/log"
 
 	"github.com/go-resty/resty/v2"
 )
@@ -87,7 +88,7 @@ func (sc *SIPHttpClient) CreateSession(req *CreateSessionRequest) (*Session, err
 		return nil, err
 	}
 	if resp.RawResponse.StatusCode != http.StatusOK {
-		fmt.Printf("request with failed, body:%v", string(resp.Body()))
+		log.Infof("request with failed, body:%v", string(resp.Body()))
 		return nil, errors.ErrHttpRequestErr
 	}
 
@@ -99,7 +100,7 @@ func (sc *SIPHttpClient) ReleaseSession(req *ReleaseSessionRequest) error {
 		return err
 	}
 	if resp.RawResponse.StatusCode != http.StatusOK {
-		fmt.Printf("request with failed, body:%v", string(resp.Body()))
+		log.Infof("request with failed, body:%v", string(resp.Body()))
 		return errors.ErrHttpRequestErr
 	}
 
@@ -111,7 +112,7 @@ func (sc *SIPHttpClient) RecoverSession(req *RecoverSessionRequest) error {
 		return err
 	}
 	if resp.RawResponse.StatusCode != http.StatusOK {
-		fmt.Printf("request with failed, body:%v", string(resp.Body()))
+		log.Infof("request with failed, body:%v", string(resp.Body()))
 		return errors.ErrHttpRequestErr
 	}
 
@@ -125,7 +126,7 @@ func (sc *SIPHttpClient) GetDeviceStat(deviceid string) (*SIPDeviceStat, error) 
 		return nil, err
 	}
 	if resp.RawResponse.StatusCode != http.StatusOK {
-		fmt.Printf("request with failed, body:%v", string(resp.Body()))
+		log.Infof("request with failed, body:%v", string(resp.Body()))
 		return nil, errors.ErrHttpRequestErr
 	}
 
@@ -141,7 +142,7 @@ func (sc *SIPHttpClient) AddDevice(req *AddDeviceRequest) error {
 		return err
 	}
 	if resp.RawResponse.StatusCode != http.StatusOK {
-		fmt.Printf("request with failed, body:%v", string(resp.Body()))
+		log.Infof("request with failed, body:%v", string(resp.Body()))
 		return errors.ErrHttpRequestErr
 	}
 
@@ -153,7 +154,7 @@ func (sc *SIPHttpClient) PTZV(req *CameraCtrlRequest) error {
 		return err
 	}
 	if resp.RawResponse.StatusCode != http.StatusOK {
-		fmt.Printf("request with failed, body:%v", string(resp.Body()))
+		log.Infof("request with failed, body:%v", string(resp.Body()))
 		return errors.ErrHttpRequestErr
 	}
 

@@ -37,6 +37,8 @@ type Device interface {
 
 	Host() string
 	Port() int
+
+	Update(password string, protocol NetProtocol) error
 }
 
 func NewDevice(req AddDeviceRequest) (Device, error) {

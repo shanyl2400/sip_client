@@ -13,6 +13,12 @@ type AddDeviceRequest struct {
 	Protocol string `json:"protocol"`
 }
 
+type UpdateDeviceRequest struct {
+	Name     string `json:"name"`
+	Password string `json:"password"`
+	Protocol string `json:"protocol"`
+}
+
 type SendMessageRequest struct {
 	MessageType string            `json:"message_type"`
 	Values      map[string]string `json:"values"`

@@ -1,11 +1,11 @@
 package devices
 
 import (
-	"encoding/json"
 	"fmt"
 	"io"
 	"net"
 	"sipsimclient/config"
+	"sipsimclient/log"
 	"sipsimclient/model"
 	"sipsimclient/service/devices/message"
 	"strconv"
@@ -42,7 +42,7 @@ type socketDevice struct {
 func (td *socketDevice) Connect() error {
 	if td.state != DeviceStateReady && td.state != DeviceStateOffline &&
 		td.state != DeviceStateErr {
-		fmt.Printf("device %v is already connected\n", td.name)
+		log.Infof("device %v is already connected", td.name)
 		return nil
 	}
 	td.state = DeviceStateConnected
@@ -62,6 +62,7 @@ func (td *socketDevice) Connect() error {
 	//register
 	err = td.registerDevice()
 	if err != nil {
+		td.logger.Errorf("register device failed, err: %v", err)
 		td.state = DeviceStateErr
 		return err
 	}
@@ -71,20 +72,24 @@ func (td *socketDevice) Connect() error {
 }
 func (td *socketDevice) Disconnect() error {
 	if td.state == DeviceStateOffline {
-		fmt.Printf("device %v is already disconnected\n", td.name)
+		log.Infof("device %v is already disconnected", td.name)
 		return nil
 	}
 	//TODO: implement it
+	log.Debugf("%v prepare to close", td.name)
 	td.conn.Close()
+	log.Debugf("%v connect closed", td.name)
 	td.quit <- struct{}{}
+	log.Debugf("%v quit handler", td.name)
 	td.ticker.Stop()
+	log.Debugf("%v stop ticker", td.name)
 	td.state = DeviceStateOffline
 	return nil
 }
 
 func (td *socketDevice) Send(msg Message) error {
 	if td.state != DeviceStateConnected && td.state != DeviceStateRegisting && td.state != DeviceStateOnline && td.state != DeviceStateUnauthed {
-		// fmt.Printf("device %v is not online\n", td.name)
+		log.Infof("device %v is not online", td.name)
 		return nil
 	}
 	msgBytes := msg.Bytes()
@@ -107,6 +112,34 @@ func (td *socketDevice) SendForResponse(msg Message) error {
 func (td *socketDevice) Logs(theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error) {
 	//TODO: implement it
 	return td.logger.RangeLogs(theme, start, end)
+}
+
+func (td *socketDevice) Update(password string, protocol NetProtocol) error {
+	if password == "" && protocol == "" {
+		log.Debugf("%v nothing to update", td.name)
+		return nil
+	}
+	if td.state != DeviceStateErr && td.state != DeviceStateOffline {
+		err := td.Disconnect()
+		if err != nil {
+			log.Warnf("%v disconnect failed, err: %v", td.name, err)
+			return err
+		}
+	}
+	if password != "" {
+		td.password = password
+	}
+	if protocol != "" {
+		td.protocol = protocol
+	}
+
+	err := td.Connect()
+	if err != nil {
+		log.Warnf("%v reconnect failed, err: %v", td.name, err)
+		return err
+	}
+
+	return nil
 }
 
 func (td *socketDevice) Name() string {
@@ -146,18 +179,18 @@ func (td *socketDevice) registerDevice() error {
 	return nil
 }
 
-func (td *socketDevice) onReceive(msg *sip.Msg) {
+func (td *socketDevice) onReceive(msg *sip.Msg, raw string) {
 	//TODO: implement it
 	if msg.Request == nil {
 		//response
-		td.handleResponse(msg)
+		td.handleResponse(msg, raw)
 	} else {
 		//request
-		td.handleRequest(msg)
+		td.handleRequest(msg, raw)
 	}
 }
 
-func (td *socketDevice) handleResponse(msg *sip.Msg) {
+func (td *socketDevice) handleResponse(msg *sip.Msg, raw string) {
 	td.pendingResponseMutex.Lock()
 	_, ok := td.pendingResponse[msg.CallID]
 	delete(td.pendingResponse, msg.CallID)
@@ -165,8 +198,8 @@ func (td *socketDevice) handleResponse(msg *sip.Msg) {
 
 	if !ok {
 		//无效响应
-		msgJSON, _ := json.Marshal(msg)
-		td.logger.Receive("Unknown response", string(msgJSON))
+		// msgJSON, _ := json.Marshal(msg)
+		td.logger.Receive("Unknown response", raw)
 		return
 	}
 
@@ -174,32 +207,33 @@ func (td *socketDevice) handleResponse(msg *sip.Msg) {
 	case sip.MethodRegister:
 		//响应Register, 修改device状态
 		if msg.Status == sip.StatusOK {
+			log.Debugf("%v: receive ok response", td.name)
 			td.state = DeviceStateOnline
 		} else if msg.Status == sip.StatusUnauthorized {
+			log.Debugf("%v: receive unauthorized response", td.name)
 			td.state = DeviceStateUnauthed
 		} else {
+			log.Debugf("%v: receive error response", td.name)
 			td.state = DeviceStateErr
 		}
 	default:
-		msgJSON, _ := json.Marshal(msg)
-		td.logger.Receive("Unhandled response", string(msgJSON))
+		td.logger.Receive("Unhandled response", raw)
 	}
 }
-func (td *socketDevice) handleRequest(msg *sip.Msg) {
+func (td *socketDevice) handleRequest(msg *sip.Msg, raw string) {
 	//处理请求
 	switch msg.Method {
 	case sip.MethodInvite:
-		fmt.Println("receive invite")
+		log.Debugf("%v: receive invite", td.name)
 		td.SendForResponse(message.NewInviteResponse(msg, td.host, td.port, string(td.protocol)))
 	case sip.MethodBye:
-		fmt.Println("receive bye")
+		log.Debugf("%v: receive bye", td.name)
 		td.SendForResponse(message.NewOKResponseMessage(msg))
 	case sip.MethodCancel:
-		fmt.Println("receive cancel")
+		log.Debugf("%v: receive cancel", td.name)
 		td.SendForResponse(message.NewOKResponseMessage(msg))
 	default:
-		msgJSON, _ := json.Marshal(msg)
-		td.logger.Receive("Unhandled request", string(msgJSON))
+		td.logger.Receive("Unhandled request", raw)
 	}
 }
 
@@ -211,17 +245,16 @@ func (td *socketDevice) handleMessage() {
 			if err != nil {
 				td.logger.Receivef("Can't parse sip message, err: %v", text, err)
 				td.state = DeviceStateErr
-				fmt.Println("parse message failed")
+				log.Warnf("parse message failed, err: %v", err)
 				return
 			}
-			td.onReceive(msg)
+			td.onReceive(msg, text)
 		case <-td.ticker.C:
 			//send liveness message
-			// fmt.Println("send heart beat")
-			td.Send(message.NewHeartBeatMessage(td.name, td.host, td.port))
-			// if err != nil {
-			// 	fmt.Println("send failed:", err)
-			// }
+			err := td.Send(message.NewHeartBeatMessage(td.name, td.host, td.port))
+			if err != nil {
+				log.Warnf("send failed: %v", err)
+			}
 		case <-td.quit:
 			return
 		}

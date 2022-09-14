@@ -11,12 +11,15 @@ import (
 type User struct {
 	Name     string
 	Password string
+	Role     string
 }
 
 type UserRepository interface {
 	Put(u *User) error
 	Get(name string) (*User, error)
 	Delete(name string) error
+
+	All() ([]*User, error)
 }
 
 type BoltUserRepository struct {
@@ -74,6 +77,28 @@ func (b *BoltUserRepository) Delete(name string) error {
 		return err
 	}
 	return nil
+}
+func (b *BoltUserRepository) All() ([]*User, error) {
+	out := make([]*User, 0)
+	err := Get().View(func(tx *bolt.Tx) error {
+		b := tx.Bucket([]byte(UsersBucket))
+
+		c := b.Cursor()
+
+		for k, v := c.First(); k != nil; k, v = c.Next() {
+			user := new(User)
+			err := json.Unmarshal(v, user)
+			if err != nil {
+				return err
+			}
+			out = append(out, user)
+		}
+		return nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
 }
 
 var (

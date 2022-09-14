@@ -3,8 +3,10 @@ package devices
 import (
 	"fmt"
 	"sipsimclient/errors"
+	"sipsimclient/log"
 	"sipsimclient/model"
 	"sipsimclient/repository"
+	"sync"
 	"time"
 
 	"github.com/alexeyco/simpletable"
@@ -15,6 +17,8 @@ type DeviceManager interface {
 	List() DeviceList
 	Get(name string) (Device, error)
 	Add(req AddDeviceRequest) error
+
+	Update(req UpdateDeviceRequest) error
 
 	Connect(name string) error
 	Disconnect(name string) error
@@ -53,7 +57,8 @@ func (devices DeviceList) String() string {
 }
 
 type deviceMapManager struct {
-	devices map[string]Device
+	devices     map[string]Device
+	deviceMutex sync.Mutex
 }
 
 func (dm *deviceMapManager) Init() {
@@ -68,6 +73,8 @@ func (dm *deviceMapManager) List() DeviceList {
 	return ans
 }
 func (dm *deviceMapManager) Get(name string) (Device, error) {
+	dm.deviceMutex.Lock()
+	defer dm.deviceMutex.Unlock()
 	device, exists := dm.devices[name]
 	if !exists {
 		return nil, errors.ErrDeviceNotExists
@@ -76,6 +83,9 @@ func (dm *deviceMapManager) Get(name string) (Device, error) {
 }
 func (dm *deviceMapManager) Add(req AddDeviceRequest) error {
 	//check name duplicate
+	dm.deviceMutex.Lock()
+	defer dm.deviceMutex.Unlock()
+
 	_, exists := dm.devices[req.Name]
 	if exists {
 		return errors.ErrDuplicateDeviceName
@@ -88,23 +98,50 @@ func (dm *deviceMapManager) Add(req AddDeviceRequest) error {
 
 	return nil
 }
+func (dm *deviceMapManager) Update(req UpdateDeviceRequest) error {
+	dm.deviceMutex.Lock()
+	device, exists := dm.devices[req.Name]
+	dm.deviceMutex.Unlock()
+	if !exists {
+		return errors.ErrDeviceNotExists
+	}
+	err := device.Update(req.Password, req.Protocol)
+	if err != nil {
+		return err
+	}
+
+	dm.deviceMutex.Lock()
+	dm.devices[req.Name] = device
+	dm.deviceMutex.Unlock()
+
+	return nil
+}
 
 func (dm *deviceMapManager) Connect(name string) error {
+	dm.deviceMutex.Lock()
 	device, exists := dm.devices[name]
+	dm.deviceMutex.Unlock()
+
 	if !exists {
 		return errors.ErrDeviceNotExists
 	}
 	return device.Connect()
 }
 func (dm *deviceMapManager) Disconnect(name string) error {
+	dm.deviceMutex.Lock()
 	device, exists := dm.devices[name]
+	dm.deviceMutex.Unlock()
+
 	if !exists {
 		return errors.ErrDeviceNotExists
 	}
 	return device.Disconnect()
 }
 func (dm *deviceMapManager) Remove(name string) error {
+	dm.deviceMutex.Lock()
 	device, exists := dm.devices[name]
+	dm.deviceMutex.Unlock()
+
 	if !exists {
 		//no such name
 		return nil
@@ -123,7 +160,7 @@ func (dm *deviceMapManager) Remove(name string) error {
 	//data persistence
 	err := repository.GetDeviceRepository().Delete(name)
 	if err != nil {
-		fmt.Println("data persistence failed, err:", err)
+		log.Warnf("data persistence failed, err: %v", err)
 	}
 
 	return nil
@@ -132,19 +169,21 @@ func (dm *deviceMapManager) Remove(name string) error {
 func (dm *deviceMapManager) DoSend(name string, msgType MessageType, val map[string]string) error {
 	device, err := dm.Get(name)
 	if err != nil {
-		fmt.Println("no such device name:", name)
+		log.Warnf("no such device name: %v, err: %v", name, err)
 		return err
 	}
 	msg := createMessage(device, msgType, val)
 	if msg == nil {
-		fmt.Println("invlaid message type:", msgType)
+		log.Infof("invlaid message type: %v", msgType)
 		return errors.ErrInvalidMessageType
 	}
 	return dm.Send(name, msg)
 }
 
 func (dm *deviceMapManager) Send(name string, msg Message) error {
+	dm.deviceMutex.Lock()
 	device, exists := dm.devices[name]
+	dm.deviceMutex.Unlock()
 	if !exists {
 		return errors.ErrDeviceNotExists
 	}
@@ -152,7 +191,10 @@ func (dm *deviceMapManager) Send(name string, msg Message) error {
 }
 
 func (dm *deviceMapManager) Logs(name string, theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error) {
+	dm.deviceMutex.Lock()
 	device, exists := dm.devices[name]
+	dm.deviceMutex.Unlock()
+
 	if !exists {
 		return nil, errors.ErrDeviceNotExists
 	}
@@ -160,6 +202,11 @@ func (dm *deviceMapManager) Logs(name string, theme model.Theme, start, end time
 }
 
 type AddDeviceRequest struct {
+	Name     string
+	Password string
+	Protocol NetProtocol
+}
+type UpdateDeviceRequest struct {
 	Name     string
 	Password string
 	Protocol NetProtocol

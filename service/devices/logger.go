@@ -2,6 +2,7 @@ package devices
 
 import (
 	"fmt"
+	"sipsimclient/log"
 	"sipsimclient/model"
 	"sipsimclient/repository"
 	"time"
@@ -93,7 +94,7 @@ func (d *DeviceLogger) Receivef(info string, msg string, val ...interface{}) {
 func (d *DeviceLogger) Logs(theme model.Theme) ([]*model.DeviceLog, error) {
 	logs, err := repository.GetDeviceLogRepository().Query(d.deviceName, theme)
 	if err != nil {
-		fmt.Println("query logs failed", err)
+		log.Warnf("query logs failed, err: %v", err)
 		return nil, err
 	}
 	out := make([]*model.DeviceLog, len(logs))
@@ -112,7 +113,7 @@ func (d *DeviceLogger) Logs(theme model.Theme) ([]*model.DeviceLog, error) {
 func (d *DeviceLogger) RangeLogs(theme model.Theme, start, end time.Time) ([]*model.DeviceLog, error) {
 	logs, err := repository.GetDeviceLogRepository().QueryRange(d.deviceName, theme, start, end)
 	if err != nil {
-		fmt.Println("query logs failed", err)
+		log.Warnf("query logs failed, err: %v", err)
 		return nil, err
 	}
 	out := make([]*model.DeviceLog, len(logs))

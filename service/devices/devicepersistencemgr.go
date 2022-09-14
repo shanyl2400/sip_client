@@ -1,7 +1,7 @@
 package devices
 
 import (
-	"fmt"
+	"sipsimclient/log"
 	"sipsimclient/model"
 	"sipsimclient/repository"
 	"time"
@@ -15,7 +15,7 @@ func (d *devicePersistenceManager) Init() {
 	//load from bolt & create them
 	devices, err := repository.GetDeviceRepository().All()
 	if err != nil {
-		fmt.Println("can't read devices from repository")
+		log.Warn("can't read devices from repository")
 		return
 	}
 
@@ -26,13 +26,13 @@ func (d *devicePersistenceManager) Init() {
 			Protocol: NetProtocol(devices[i].Protocol),
 		})
 		if err != nil {
-			fmt.Printf("create device from repository failed, name: %v\n", devices[i].Name)
+			log.Warnf("create device from repository failed, name: %v", devices[i].Name)
 			return
 		}
 
 		err = d.manager.Connect(devices[i].Name)
 		if err != nil {
-			fmt.Printf("create connection with device from repository failed, name: %v\n", devices[i].Name)
+			log.Warnf("create connection with device from repository failed, name: %v", devices[i].Name)
 			return
 		}
 	}
@@ -56,7 +56,24 @@ func (d *devicePersistenceManager) Add(req AddDeviceRequest) error {
 		Protocol: string(req.Protocol),
 	})
 	if err != nil {
-		fmt.Println("data persistence failed, err:", err)
+		log.Warnf("data persistence failed, err: %v", err)
+	}
+	return nil
+}
+
+func (d *devicePersistenceManager) Update(req UpdateDeviceRequest) error {
+	err := d.manager.Update(req)
+	if err != nil {
+		return err
+	}
+	err = repository.GetDeviceRepository().Put(&repository.Device{
+		Name:     req.Name,
+		Password: req.Password,
+		Protocol: string(req.Protocol),
+	})
+	if err != nil {
+		log.Warnf("%v data persistence failed, err: %v", req.Name, err)
+		return err
 	}
 	return nil
 }
@@ -75,7 +92,7 @@ func (d *devicePersistenceManager) Remove(name string) error {
 	//data persistence
 	err = repository.GetDeviceRepository().Delete(name)
 	if err != nil {
-		fmt.Println("data persistence failed, err:", err)
+		log.Warnf("data persistence failed, err: %v", err)
 	}
 	return nil
 }
